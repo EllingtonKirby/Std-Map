@@ -23,14 +23,16 @@ namespace cs540{
 			class ReverseIterator;
 			struct Node{
 				int height;
-				Key_T key;
-				Mapped_T value;
+				Key_T& key;
+				Mapped_T& value;
+				ValueType vtype;
 				Node **next;
 				Node *prev;
 				int width;
-				Node(Key_T &keyed, Mapped_T &valued, int applied_height = rheight()){
-					key = keyed;
-					value = valued;
+				Node(Key_T keyed, const Mapped_T &valued, int applied_height = rheight()){
+					vtype = std::pair<Key_T, Mapped_T>(key, value);
+					value = vtype.second;
+					key = vtype.first;
 					height = applied_height;
 					next = new Node*[max_height];
 					for(int i = 0; i < max_height; i++){
@@ -90,7 +92,7 @@ namespace cs540{
 			void clear();
 
 			class Base_Iterator{
-				public:
+				protected:
 					std::shared_ptr<Node> target;
 			};
 			
@@ -158,12 +160,24 @@ namespace cs540{
 		//What is the best way to do this? 
 		//Iterate through using iterators, dereference the iterator and call insert?
 		//Iterate through using iterators, dereference the iterator and copy the node? Seems to be the best, but need a way to also copy head
-		//Begin skips head
-		//Other option is to iterate through the actual nodes of RHS and call the node copy constructor, but this may violate the access rules of a map
-		//ie. the head and tail pointers are private
-		if(this == rhs){}
-		auto iter = rhs.begin();
+		//Begin skips head, but TA suggests this is best way. Oh dont need to copy head... just call insert and the head will be properly formed
+		int max_height = 32;
+		Node * head = new Node(NULL, NULL, max_height);
+		Node * tail = new Node(NULL, NULL, max_height);
+		for(int i = 0; i < max_height; i++){
+			head->next[i] = tail;
+			tail->next[i] = nullptr;
+		}
+		head->prev = nullptr;
+		tail->prev = head;
+		size = 0;
 		
+		auto iter = rhs.begin();
+		while(iter != rhs.end()){
+			//For the insert function, do we insert the keys and mapped objects by value??? Or references??
+			this->skip_list_insert(iter->first, iter->second);
+		}
+			
 
 	}
 	//operator- 
@@ -177,6 +191,7 @@ namespace cs540{
 	//destructor
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::~Map(){
+		//Ask about this function
 		Node * it = tail->prev;
 		while(it->prev != nullptr){
 			it = it->prev;
@@ -195,28 +210,47 @@ namespace cs540{
 	}
 	
 	//Iterator ++ operator returns reference post increment
+	//the ampersand at the end takes care of the return by reference 
 	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator++(){}
+	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator++(){
+		this->target = target->next[0];
+		return *this;
+	}
 	
 	//Iterator ++ operator returns iterator preincrement
 	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator++(int){}
+	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator++(int){
+		this->target = target->next[0];
+		return *this;
+	}
 	
 	//Iterator -- operator returns reference postdecremet
 	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator--(){}
+	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator--(){
+		this->target = target->prev;
+		return *this;
+	}
 	
 	//Iterator -- operator returns iterator predecrement
 	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator--(int){}
+	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator--(int){
+		this->target = target->prev;
+		return this;
+	}
 	
 	//Iterator -> access	
 	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::ValueType* Map<Key_T, Mapped_T>::Iterator::operator->() const{}
+	typename Map<Key_T, Mapped_T>::ValueType* Map<Key_T, Mapped_T>::Iterator::operator->() const{
+		//Does this return a pointer???
+		return this->target->vtype;	
+	}
 	
 	//Iterator dereference operator 
 	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::ValueType& Map<Key_T, Mapped_T>::Iterator::operator*() const{}
+	typename Map<Key_T, Mapped_T>::ValueType& Map<Key_T, Mapped_T>::Iterator::operator*() const{
+		//Does this pair object copy the elements by value? How do I make it possible to modify the members of the iterator via this function
+		return this->target->vtype; 
+	}
 
 	//ConstIterator constructor
 	template<typename Key_T, typename Mapped_T>
@@ -304,6 +338,7 @@ namespace cs540{
 		Node **fix = new Node*[max_height];
 
 		for(int i = curr_height - 1; i >= 0; i--){
+			
 			while(it->next[i] != nullptr && it->next[i]->key < key){
 				it = it->next[i];
 			}
