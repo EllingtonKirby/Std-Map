@@ -17,7 +17,10 @@ namespace cs540{
 			int curr_height;
 			std::pair<Node*, bool> skip_list_insert(Key_T key, Mapped_T val, bool searchFlag);
 			bool skip_list_erase(const Key_T key);
-		public:
+		public:	
+			//Member Type
+			typedef std::pair<const Key_T, Mapped_T> ValueType;
+			
 			class Iterator;
 			class ConstIterator;
 			class ReverseIterator;
@@ -60,8 +63,7 @@ namespace cs540{
 					}
 				};
 			};
-			//Member Type
-			typedef std::pair<const Key_T, Mapped_T> ValueType;
+
 
 			//Constructors and Assignment
 			Map();
@@ -91,14 +93,10 @@ namespace cs540{
 			void erase(const Key_T &);
 			void clear();
 
-			class Base_Iterator{
-				protected:
-					std::shared_ptr<Node> target;
-			};
-			
-			class Iterator: public Base_Iterator{	
+			class Iterator{	
 				private:
 					Iterator(Node* pos);
+					std::shared_ptr<Node> target;
 				public:
 					Iterator(const Iterator &);
 					Iterator& operator=(const Iterator &);
@@ -110,9 +108,10 @@ namespace cs540{
 					ValueType &operator*() const;
 			};
 
-			class ConstIterator: public Base_Iterator{
+			class ConstIterator{
 				private:
 					ConstIterator(const Node* pos);
+					std::shared_ptr<Node> target;
 				public:
 					ConstIterator(const Iterator &);
 					ConstIterator& operator=(const Iterator &);
@@ -124,9 +123,10 @@ namespace cs540{
 					const ValueType &operator*() const;
 			};
 
-			class ReverseIterator: public Base_Iterator{
+			class ReverseIterator{
 				private:
 					ReverseIterator(Node* pos);
+					std::shared_ptr<Node> target;
 				public:
 					ReverseIterator(const Iterator &);
 					ReverseIterator& operator=(const Iterator &);
@@ -157,10 +157,6 @@ namespace cs540{
 
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(const Map &rhs){
-		//What is the best way to do this? 
-		//Iterate through using iterators, dereference the iterator and call insert?
-		//Iterate through using iterators, dereference the iterator and copy the node? Seems to be the best, but need a way to also copy head
-		//Begin skips head, but TA suggests this is best way. Oh dont need to copy head... just call insert and the head will be properly formed
 		int max_height = 32;
 		Node * head = new Node(NULL, NULL, max_height);
 		Node * tail = new Node(NULL, NULL, max_height);
@@ -174,8 +170,8 @@ namespace cs540{
 		
 		auto iter = rhs.begin();
 		while(iter != rhs.end()){
-			//For the insert function, do we insert the keys and mapped objects by value??? Or references??
 			this->skip_list_insert(iter->first, iter->second);
+			iter++;
 		}
 			
 
@@ -220,8 +216,9 @@ namespace cs540{
 	//Iterator ++ operator returns iterator preincrement
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator++(int){
+		Iterator retval = *this;
 		this->target = target->next[0];
-		return *this;
+		return retval;
 	}
 	
 	//Iterator -- operator returns reference postdecremet
@@ -234,8 +231,9 @@ namespace cs540{
 	//Iterator -- operator returns iterator predecrement
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator--(int){
+		Iterator retval = *this;
 		this->target = target->prev;
-		return this;
+		return retval;
 	}
 	
 	//Iterator -> access	
