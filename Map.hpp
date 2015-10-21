@@ -178,11 +178,28 @@ namespace cs540{
 	}
 	//operator- 
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>& Map<Key_T, Mapped_T>::operator=(const Map&){}
+	Map<Key_T, Mapped_T>& Map<Key_T, Mapped_T>::operator=(const Map& rhs){
+		if(*this == rhs){
+			return *this;
+		}
+		auto iter = rhs.begin();
+		while(iter != rhs.end){
+			this->skip_list_insert(iter->first, iter->second);
+			iter++;
+		}
+
+		return *this;
+	}
 
 	//initializer list construction
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Map(std::initializer_list<std::pair<const Key_T, Mapped_T>>){}
+	Map<Key_T, Mapped_T>::Map(std::initializer_list<std::pair<const Key_T, Mapped_T>> list){
+		auto iter = list.begin();
+		while(iter != list.end()){
+			this->skip_list_insert(iter->first, iter->second);
+			iter++;
+		}
+	}
 	
 	//destructor
 	template<typename Key_T, typename Mapped_T>
