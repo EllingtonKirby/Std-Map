@@ -89,7 +89,12 @@ namespace cs540{
 			//Modifiers
 			std::pair<Iterator, bool> insert(const ValueType &);
 			template<typename IT_T> 
-			void insert(IT_T range_beg, IT_T range_end);
+			void insert(IT_T range_beg, IT_T range_end){
+				while(begin != end){
+					skip_list_insert(*begin.first, *begin.second);
+				}
+				
+			}
 			void erase(Iterator pos);
 			void erase(const Key_T &);
 			void clear();
@@ -438,13 +443,6 @@ namespace cs540{
 		return insert_result.second ? std::pair<Iterator, bool>(iter, true) : std::pair<Iterator, bool>(iter, false);
 	}
 	
-	template<typename IT_T>
-	template<typename Key_T, typename Mapped_T>
-	void Map<Key_T, Mapped_T>::insert(IT_T begin, IT_T end){
-		while(begin != end){
-			skip_list_insert(*begin.first, *begin.second);
-		}
-	}
 }
 //Comparison
 //bool operator==(const Map &, const Map &);
