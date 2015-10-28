@@ -147,7 +147,8 @@ namespace cs540{
 			};
 
 
-	};	
+	};
+	//Map Default Constructor	
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(){
 		int max_height = 32; //TODO find out what to do with max height
@@ -162,10 +163,7 @@ namespace cs540{
 		size = 0;
 		//What's next?
 	}
-	template<typename Key_T, typename Mapped_T>
-	void Map<Key_T, Mapped_T>::insertSpecificNode(int level, Map<Key_T, Mapped_T>::Node *last, Map<Key_T, Mapped_T>::Node* n){
-		
-	}
+	//Map Copy Constructor
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(const Map &rhs){
 		int max_height = 32;
@@ -196,7 +194,7 @@ namespace cs540{
 			current_size++;
 		}
 	}
-	//operator- 
+	//Map operator= 
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>& Map<Key_T, Mapped_T>::operator=(const Map& rhs){
 		if(*this == rhs){
@@ -222,7 +220,7 @@ namespace cs540{
 		return *this;
 	}
 
-	//initializer list construction
+	//Map initializer list construction
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(std::initializer_list<std::pair<const Key_T, Mapped_T>> list){
 		auto iter = list.begin();
@@ -232,7 +230,7 @@ namespace cs540{
 		}
 	}
 	
-	//destructor
+	//Map destructor
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::~Map(){
 		//Ask about this function
@@ -370,7 +368,7 @@ namespace cs540{
 		}
 
 		if(h >= max_height){
-			h = max_height - 1;
+			h = h % max_height;
 		}
 		return h;
 	}
@@ -433,7 +431,7 @@ namespace cs540{
 
 		return Iterator(result.first);
 	}		
-	
+	//At, non const
 	template<typename Key_T, typename Mapped_T>
 	Mapped_T& Map<Key_T, Mapped_T>::at(const Key_T &search){
 		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
@@ -443,9 +441,19 @@ namespace cs540{
 
 		return result.first->key;
 	}
-			
-	//const Mapped_T &at(const Key_T &) const;
-			
+	
+	//At, const
+	template<typename Key_T, typename Mapped_T>	
+	const Mapped_T& Map<Key_T, Mapped_T>::at(const Key_T &search) const{
+		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
+		if(result.first == nullptr){
+			throw std::out_of_range("Key is not found in map");
+		}
+
+		return result.first->key;
+	}
+		
+	//Map Operator[]	
 	template<typename Key_T, typename Mapped_T>
 	Mapped_T& Map<Key_T, Mapped_T>::operator[](const Key_T &search){
 		std::pair<Node*, bool> result  = skip_list_insert(search, NULL, true);
@@ -457,6 +465,14 @@ namespace cs540{
 		else{
 			return result.first->value;
 		}
+	}	
+	
+	//ValueType insert
+	template<typename Key_T, typename Mapped_T>
+	std::pair<typename Map<Key_T, Mapped_T>::Iterator, bool> Map<Key_T, Mapped_T>::insert(const Map<Key_T, Mapped_T>::ValueType &vt){
+		std::pair<Node*, bool> insert_result = skip_list_insert(vt.first, vt.second);
+		Iterator iter(insert_result.first);			
+		return insert_result.second ? std::pair<Iterator, bool>(iter, true) : std::pair<Iterator, bool>(iter, false);
 	}
 
 	//All credit to Eternally Confuzzled at eternallyconfuzzled.com/tuts/datastructures/jsw_tut_skip.aspx
@@ -495,11 +511,14 @@ namespace cs540{
 		delete[] fix;
 		return true;
 	}
+	
+	//Iterator erase
 	template<typename Key_T, typename Mapped_T>
 	void Map<Key_T, Mapped_T>::erase(Map<Key_T, Mapped_T>::Iterator pos){
 		skip_list_erase(*pos.first);
 	}
 
+	//Key_T erase
 	template<typename Key_T, typename Mapped_T>
 	void Map<Key_T, Mapped_T>::erase(const Key_T &search){
 		bool result = skip_list_erase(search);
@@ -508,6 +527,7 @@ namespace cs540{
 		}
 	}
 
+	//Clear
 	template<typename Key_T, typename Mapped_T>
 	void Map<Key_T, Mapped_T>::clear(){
 		auto it = begin();
@@ -518,18 +538,13 @@ namespace cs540{
 		}	
 	}
 
-	template<typename Key_T, typename Mapped_T>
-	std::pair<typename Map<Key_T, Mapped_T>::Iterator, bool> Map<Key_T, Mapped_T>::insert(const Map<Key_T, Mapped_T>::ValueType &vt){
-		std::pair<Node*, bool> insert_result = skip_list_insert(vt.first, vt.second);
-		Iterator iter(insert_result.first);			
-		return insert_result.second ? std::pair<Iterator, bool>(iter, true) : std::pair<Iterator, bool>(iter, false);
-	}
-	
+	//Size
 	template<typename Key_T, typename Mapped_T>
 	size_t Map<Key_T, Mapped_T>::size() const{
 		return current_size;
 	}	
 
+	//Empty
 	template<typename Key_T, typename Mapped_T>
 	bool Map<Key_T, Mapped_T>::empty() const {
 		return current_size == 0;
