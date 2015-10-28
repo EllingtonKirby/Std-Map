@@ -495,6 +495,28 @@ namespace cs540{
 		delete[] fix;
 		return true;
 	}
+	template<typename Key_T, typename Mapped_T>
+	void Map<Key_T, Mapped_T>::erase(Map<Key_T, Mapped_T>::Iterator pos){
+		skip_list_erase(*pos.first);
+	}
+
+	template<typename Key_T, typename Mapped_T>
+	void Map<Key_T, Mapped_T>::erase(const Key_T &search){
+		bool result = skip_list_erase(search);
+		if(!result){
+			throw std::out_of_range("Key not found in map on erase attempt");
+		}
+	}
+
+	template<typename Key_T, typename Mapped_T>
+	void Map<Key_T, Mapped_T>::clear(){
+		auto it = begin();
+		while(it != end()){
+			Key_T to_del = *it.first;
+			it++;
+			skip_list_erase(to_del);
+		}	
+	}
 
 	template<typename Key_T, typename Mapped_T>
 	std::pair<typename Map<Key_T, Mapped_T>::Iterator, bool> Map<Key_T, Mapped_T>::insert(const Map<Key_T, Mapped_T>::ValueType &vt){
@@ -503,6 +525,19 @@ namespace cs540{
 		return insert_result.second ? std::pair<Iterator, bool>(iter, true) : std::pair<Iterator, bool>(iter, false);
 	}
 	
+	template<typename Key_T, typename Mapped_T>
+	size_t Map<Key_T, Mapped_T>::size() const{
+		return current_size;
+	}	
+
+	template<typename Key_T, typename Mapped_T>
+	bool Map<Key_T, Mapped_T>::empty() const {
+		return current_size == 0;
+	}
+
+
+
+
 }
 //Comparison
 //bool operator==(const Map &, const Map &);
