@@ -3,6 +3,8 @@
 #include <random>
 #include <limits.h>
 #include <memory>
+#include <array>
+#include <stdexcept>
 
 namespace cs540{
 	template<typename Key_T, typename Mapped_T> class Map{
@@ -17,6 +19,7 @@ namespace cs540{
 			int curr_height;
 			std::pair<Node*, bool> skip_list_insert(Key_T key, Mapped_T val, bool searchFlag);
 			bool skip_list_erase(const Key_T key);
+			void insertSpecificNode(int level, Node* last, Node* n);
 		public:	
 			//Member Type
 			typedef std::pair<const Key_T, Mapped_T> ValueType;
@@ -47,20 +50,19 @@ namespace cs540{
 					delete[] next;
 				};
 				Node(const Node& rhs){
-					this->key = rhs->key;
-					this->value = rhs->value;
-					this->height = rhs->height;
-					this->width = rhs->width;
+					this->key = rhs.key;
+					this->value = rhs.value;
+					this->height = rhs.height;
 					//What to do about prev? Is this a shallow copy? Confused about this
-					this->prev = rhs->prev;
+					//this->prev = rhs->prev;
 					
-					this->next = new Node*[max_height];
-					for(int i = 0; i < max_height; i++){
+					//this->next = new Node*[max_height];
+					//for(int i = 0; i < max_height; i++){
 						//Is this an issue? Are you pointing to the object in RHS now? Do you need to define the assignment operator here?
 						//I think this is a shallow copy, where next[i] is now pointing to the object pointed to by rhs->next[i] rather than
 						//a new instance of that node
-						this->next[i] = rhs->next[i];
-					}
+					//	this->next[i] = rhs->next[i];
+					//}
 				};
 			};
 
@@ -160,7 +162,10 @@ namespace cs540{
 		size = 0;
 		//What's next?
 	}
-
+	template<typename Key_T, typename Mapped_T>
+	void Map<Key_T, Mapped_T>::insertSpecificNode(int level, Map<Key_T, Mapped_T>::Node *last, Map<Key_T, Mapped_T>::Node* n){
+		
+	}
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(const Map &rhs){
 		int max_height = 32;
@@ -173,14 +178,23 @@ namespace cs540{
 		head->prev = nullptr;
 		tail->prev = head;
 		size = 0;
+		std::array<Node*, 32> last;
+		last.fill(&head);
 		
-		auto iter = rhs.begin();
-		while(iter != rhs.end()){
-			this->skip_list_insert(iter->first, iter->second);
-			iter++;
+		for(Node *n = rhs.head.next[0]; n != rhs.tail; n = n->next[0]){
+			Node *nn = new Node(*n);
+			for(int i = 0; i < nn->height; i++){
+				if(i == 0){
+					nn->prev = last[i];
+				}
+				//insert nn into corresponding row for each height it is a part of
+				//insertSpecificNode(i, last.at(i), nn);
+				//Is this all we need to do?
+				last.at(i).next[i] = nn;
+				last.at(i) = nn;
+			}
+			current_size++;
 		}
-			
-
 	}
 	//operator- 
 	template<typename Key_T, typename Mapped_T>
@@ -188,12 +202,23 @@ namespace cs540{
 		if(*this == rhs){
 			return *this;
 		}
-		auto iter = rhs.begin();
-		while(iter != rhs.end){
-			this->skip_list_insert(iter->first, iter->second);
-			iter++;
-		}
-
+		std::array<Node*, max_height> last;
+		last.fill(&head);
+		
+		for(Node *n = rhs.head.next[0]; n != rhs.tail; n = n->next[0]){
+			Node *nn = new Node(*n);
+			for(int i = 0; i < nn->height; i++){
+				if(i == 0){
+					nn->prev = last[i];
+				}
+				//insert nn into corresponding row for each height it is a part of
+				//insertSpecificNode(i, last.at(i), nn);
+				//Is this all we need to do?
+				last.at(i).next[i] = nn;
+				last.at(i) = nn;
+			}
+			current_size++;
+		}	
 		return *this;
 	}
 
@@ -398,7 +423,42 @@ namespace cs540{
 		return std::pair<Node*, bool>(item, true);
 	}			
 
+	//iterator find
+	template<typename Key_T, typename Mapped_T>
+	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::find(const Key_T &search){
+		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
+		if(result.first == nullptr){
+			return end();
+		}
+
+		return Iterator(result.first);
+	}		
 	
+	template<typename Key_T, typename Mapped_T>
+	Mapped_T& Map<Key_T, Mapped_T>::at(const Key_T &search){
+		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
+		if(result.first == nullptr){
+			throw std::out_of_range("Key is not found in map");
+		}
+
+		return result.first->key;
+	}
+			
+	//const Mapped_T &at(const Key_T &) const;
+			
+	template<typename Key_T, typename Mapped_T>
+	Mapped_T& Map<Key_T, Mapped_T>::operator[](const Key_T &search){
+		std::pair<Node*, bool> result  = skip_list_insert(search, NULL, true);
+		if(result.first == nullptr){
+			Mapped_T mapped;
+			skip_list_insert(search, mapped);
+			return mapped;
+		}
+		else{
+			return result.first->value;
+		}
+	}
+
 	//All credit to Eternally Confuzzled at eternallyconfuzzled.com/tuts/datastructures/jsw_tut_skip.aspx
 	//Skip List erase
 	template<typename Key_T, typename Mapped_T>
