@@ -29,19 +29,18 @@ namespace cs540{
 			class ReverseIterator;
 			struct Node{
 				int height;
-				Key_T& key;
-				Mapped_T& value;
+				Key_T key;
+				Mapped_T value;
 				ValueType vtype;
 				Node **next;
 				Node *prev;
 				int width;
-				Node(Key_T keyed, const Mapped_T &valued, int applied_height = rheight()){
-					vtype = std::pair<Key_T, Mapped_T>(key, value);
+				Node(Key_T &keyed, Mapped_T &valued, int applied_height = rheight()) : vtype(keyed, valued){
 					value = vtype.second;
 					key = vtype.first;
 					height = applied_height;
-					next = new Node*[max_height];
-					for(int i = 0; i < max_height; i++){
+					next = new Node*[height];
+					for(int i = 0; i < height; i++){
 						this->next[i] = nullptr;
 					}
 					prev = nullptr;
@@ -50,8 +49,9 @@ namespace cs540{
 					delete[] next;
 				};
 				Node(const Node& rhs){
-					this->key = rhs.key;
-					this->value = rhs.value;
+					this->vtype = rhs.vtype;
+					this->key = vtype.first;
+					this->value = vtype.second;
 					this->height = rhs.height;
 					//What to do about prev? Is this a shallow copy? Confused about this
 					//this->prev = rhs->prev;
@@ -151,16 +151,18 @@ namespace cs540{
 	//Map Default Constructor	
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(){
-		int max_height = 32; //TODO find out what to do with max height
-		Node * head = new Node(NULL, NULL, max_height);
-		Node * tail = new Node(NULL, NULL, max_height);
+		int max_height = 32; 
+		Key_T sent_key;
+		Mapped_T sent_map;
+		Node * head = new Node(sent_key, sent_map, max_height);
+		Node * tail = new Node(sent_key, sent_map, max_height);
 		for(int i = 0; i < max_height; i++){
 			head->next[i] = tail;
 			tail->next[i] = nullptr;
 		}
 		head->prev = nullptr;
 		tail->prev = head;
-		size = 0;
+		current_size = 0;
 		//What's next?
 	}
 	//Map Copy Constructor
@@ -241,8 +243,6 @@ namespace cs540{
 		}
 		delete head;
 		delete tail;
-		curr_height = 0;
-		size = 0;
 	}
 
 	//Iterator constructor
@@ -550,13 +550,54 @@ namespace cs540{
 		return current_size == 0;
 	}
 
+	//Comparison
+	template<typename Key_T, typename Mapped_T>
+	bool operator==(const Map<Key_T, Mapped_T> &lhs, const Map<Key_T, Mapped_T> &rhs){
+		if(lhs.size() != rhs.size()){
+			return false;
+		}
+		
+		auto L = lhs.begin();
+		auto R = rhs.begin();
 
+		while(L != lhs.end()){
+			if(*L != *R){
+				return false;
+			}
+			++L;
+			++R;
+		}
 
+		return true;
+	}
 
-}
-//Comparison
-//bool operator==(const Map &, const Map &);
-//bool operator!=(const Map &, const Map &);
-//bool operator<(const Map &, const Map &);
+	template<typename Key_T, typename Mapped_T>
+	bool operator!=(const Map<Key_T, Mapped_T> &lhs, const Map<Key_T, Mapped_T> &rhs){
+		return !(lhs == rhs);
+	}
+
+	template<typename Key_T, typename Mapped_T>
+	bool operator<(const Map<Key_T, Mapped_T> &lhs, const Map<Key_T, Mapped_T> &rhs){
+		if(lhs.size() > rhs.size()){
+			return false;
+		}
+		
+		auto L = lhs.begin();
+		auto R = rhs.begin();
+
+		while(L != lhs.end()){
+			if(*L < *R){
+				return true;
+			}
+			++L;
+			++R;
+		}
+		
+		if(lhs.size() < rhs.size()){
+			return true;
+		}
+
+		return false;
+	}
 //Implement all comparisons between iterators
-
+}
