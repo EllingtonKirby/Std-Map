@@ -46,6 +46,10 @@ namespace cs540{
 					prev = nullptr;
 				};
 				~Node(){
+					//What about when head is pointing to tail? ie. size is 0
+					for(int i = 0; i < height; i++){
+						delete next[i];
+					}
 					delete[] next;
 				};
 				Node(const Node& rhs){
@@ -151,6 +155,7 @@ namespace cs540{
 	//Map Default Constructor	
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map(){
+		//Lets steal his implementation... 
 		int max_height = 32; 
 		Key_T sent_key;
 		Mapped_T sent_map;
@@ -163,7 +168,6 @@ namespace cs540{
 		head->prev = nullptr;
 		tail->prev = head;
 		current_size = 0;
-		//What's next?
 	}
 	//Map Copy Constructor
 	template<typename Key_T, typename Mapped_T>
@@ -236,10 +240,12 @@ namespace cs540{
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::~Map(){
 		//Ask about this function
-		Node * it = tail->prev;
-		while(it->prev != nullptr){
-			it = it->prev;
-			delete it->next[0];
+		if(current_size > 0){
+			Node * it = tail->prev;
+			while(it->prev != nullptr){
+				it = it->prev;
+				delete it->next[0];
+			}
 		}
 		delete head;
 		delete tail;
@@ -459,7 +465,6 @@ namespace cs540{
 		std::pair<Node*, bool> result  = skip_list_insert(search, NULL, true);
 		if(result.first == nullptr){
 			Mapped_T mapped;
-			skip_list_insert(search, mapped);
 			return mapped;
 		}
 		else{

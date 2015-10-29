@@ -1,6 +1,6 @@
 COMP= g++
 FLAGS = -g -Wall -std=c++0x
-PROJ = map
+PROJ = testMap
 
 all: self_test.o
 	$(COMP) $(FLAGS) -o $(PROJ) self_test.o
