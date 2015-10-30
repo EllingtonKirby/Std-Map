@@ -5,21 +5,29 @@
 #include <memory>
 #include <array>
 #include <stdexcept>
+#include <vector>
 
 namespace cs540{
 	template<typename Key_T, typename Mapped_T> class Map{
 		public:
-			struct Node;
+			class Node;
+		       	class Base_Node;
+			class Link{
+				public:
+					friend class Map;
+					Base_Node *right;
+				       	Base_Node *left;
+					Link(Base_Node *nb) : right(nb), left(nb){}
+			};	
 		private:
 			int max_height;
 			int current_size;
-			int rheight();
-			Node * head;
-			Node * tail;
+			static int rheight();
+			Base_Node head;
+			Base_Node tail;
 			int curr_height;
 			std::pair<Node*, bool> skip_list_insert(Key_T key, Mapped_T val, bool searchFlag);
 			bool skip_list_erase(const Key_T key);
-			void insertSpecificNode(int level, Node* last, Node* n);
 		public:	
 			//Member Type
 			typedef std::pair<const Key_T, Mapped_T> ValueType;
@@ -27,47 +35,32 @@ namespace cs540{
 			class Iterator;
 			class ConstIterator;
 			class ReverseIterator;
-			struct Node{
-				int height;
-				Key_T key;
-				Mapped_T value;
-				ValueType vtype;
-				Node **next;
-				Node *prev;
-				int width;
-				Node(Key_T &keyed, Mapped_T &valued, int applied_height = rheight()) : vtype(keyed, valued){
-					value = vtype.second;
-					key = vtype.first;
-					height = applied_height;
-					next = new Node*[height];
-					for(int i = 0; i < height; i++){
-						this->next[i] = nullptr;
-					}
-					prev = nullptr;
-				};
-				~Node(){
-					//What about when head is pointing to tail? ie. size is 0
-					for(int i = 0; i < height; i++){
-						delete next[i];
-					}
-					delete[] next;
-				};
-				Node(const Node& rhs){
-					this->vtype = rhs.vtype;
-					this->key = vtype.first;
-					this->value = vtype.second;
-					this->height = rhs.height;
-					//What to do about prev? Is this a shallow copy? Confused about this
-					//this->prev = rhs->prev;
-					
-					//this->next = new Node*[max_height];
-					//for(int i = 0; i < max_height; i++){
-						//Is this an issue? Are you pointing to the object in RHS now? Do you need to define the assignment operator here?
-						//I think this is a shallow copy, where next[i] is now pointing to the object pointed to by rhs->next[i] rather than
-						//a new instance of that node
-					//	this->next[i] = rhs->next[i];
-					//}
-				};
+			class Base_Node{
+				public:
+					friend class Map;
+					int height;
+					std::vector<Link> next;
+					Base_Node(int applied_height = rheight()) : height(applied_height), next(applied_height, Link(nullptr)){};
+			};
+			class Node : public Base_Node{
+				public:
+					friend class Map;
+					Key_T key;
+					Mapped_T value;
+					ValueType vtype;
+					int width;
+					Node(Key_T &keyed, Mapped_T &valued, int applied_height = rheight()) : Base_Node(applied_height), vtype(keyed, valued){
+						value = vtype.second;
+						key = vtype.first;
+					};
+					Node(const Node& rhs) : Base_Node(rhs.height){
+						this->vtype = rhs.vtype;
+						this->key = vtype.first;
+						this->value = vtype.second;
+					};
+					~Node(){
+
+					};
 			};
 
 
@@ -107,9 +100,10 @@ namespace cs540{
 
 			class Iterator{	
 				private:
-					Iterator(Node* pos);
-					std::shared_ptr<Node> target;
+					Iterator(Base_Node* pos);
+					std::shared_ptr<Base_Node> target;
 				public:
+					friend class Map;
 					Iterator(const Iterator &);
 					Iterator& operator=(const Iterator &);
 					Iterator& operator++();
@@ -122,9 +116,10 @@ namespace cs540{
 
 			class ConstIterator{
 				private:
-					ConstIterator(const Node* pos);
-					std::shared_ptr<Node> target;
+					ConstIterator(const Base_Node* pos);
+					std::shared_ptr<Base_Node> target;
 				public:
+					friend class Map;
 					ConstIterator(const Iterator &);
 					ConstIterator& operator=(const Iterator &);
 					ConstIterator& operator++();
@@ -137,9 +132,10 @@ namespace cs540{
 
 			class ReverseIterator{
 				private:
-					ReverseIterator(Node* pos);
-					std::shared_ptr<Node> target;
+					ReverseIterator(Base_Node* pos);
+					std::shared_ptr<Base_Node> target;
 				public:
+					friend class Map;
 					ReverseIterator(const Iterator &);
 					ReverseIterator& operator=(const Iterator &);
 					ReverseIterator& operator++();
@@ -154,46 +150,39 @@ namespace cs540{
 	};
 	//Map Default Constructor	
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Map(){
+	Map<Key_T, Mapped_T>::Map() : max_height(32), head(32), tail(32){
 		//Lets steal his implementation... 
-		int max_height = 32; 
-		Key_T sent_key;
-		Mapped_T sent_map;
-		Node * head = new Node(sent_key, sent_map, max_height);
-		Node * tail = new Node(sent_key, sent_map, max_height);
+		//Key_T sent_key;
+		//Mapped_T sent_map;
+		//Node * head = new Node(sent_key, sent_map, max_height);
+		//Node * tail = new Node(sent_key, sent_map, max_height);
 		for(int i = 0; i < max_height; i++){
-			head->next[i] = tail;
-			tail->next[i] = nullptr;
+			head.next[i].right = &tail;
+			tail.next[i].left = &head;
 		}
-		head->prev = nullptr;
-		tail->prev = head;
 		current_size = 0;
 	}
 	//Map Copy Constructor
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Map(const Map &rhs){
-		int max_height = 32;
-		Node * head = new Node(NULL, NULL, max_height);
-		Node * tail = new Node(NULL, NULL, max_height);
+	Map<Key_T, Mapped_T>::Map(const Map &rhs) : max_height(32), head(32), tail(32){
 		for(int i = 0; i < max_height; i++){
-			head->next[i] = tail;
-			tail->next[i] = nullptr;
+			head.next[i].right = &tail;
+			tail.next[i].left = &head;
 		}
-		head->prev = nullptr;
-		tail->prev = head;
-		size = 0;
-		std::array<Node*, 32> last;
+		current_size = 0;
+		std::array<Base_Node*, 32> last;
 		last.fill(&head);
 		
 		for(Node *n = rhs.head.next[0]; n != rhs.tail; n = n->next[0]){
 			Node *nn = new Node(*n);
 			for(int i = 0; i < nn->height; i++){
-				if(i == 0){
-					nn->prev = last[i];
-				}
+				//if(i == 0){
+				//	nn->prev = last[i];
+				//}
 				//insert nn into corresponding row for each height it is a part of
 				//insertSpecificNode(i, last.at(i), nn);
 				//Is this all we need to do?
+				nn->next[i].left = last.at(i);
 				last.at(i).next[i] = nn;
 				last.at(i) = nn;
 			}
@@ -206,18 +195,19 @@ namespace cs540{
 		if(*this == rhs){
 			return *this;
 		}
-		std::array<Node*, max_height> last;
+		std::array<Base_Node*, max_height> last;
 		last.fill(&head);
 		
 		for(Node *n = rhs.head.next[0]; n != rhs.tail; n = n->next[0]){
 			Node *nn = new Node(*n);
 			for(int i = 0; i < nn->height; i++){
-				if(i == 0){
-					nn->prev = last[i];
-				}
+				//if(i == 0){
+				//	nn->prev = last[i];
+				//}
 				//insert nn into corresponding row for each height it is a part of
 				//insertSpecificNode(i, last.at(i), nn);
 				//Is this all we need to do?
+				nn->next[i].left = last.at(i);
 				last.at(i).next[i] = nn;
 				last.at(i) = nn;
 			}
@@ -241,27 +231,27 @@ namespace cs540{
 	Map<Key_T, Mapped_T>::~Map(){
 		//Ask about this function
 		if(current_size > 0){
-			Node * it = tail->prev;
-			while(it->prev != nullptr){
-				it = it->prev;
-				delete it->next[0];
+			Base_Node * it = tail.next[0].left;
+			while(it->next[0].left != nullptr){
+				it = it->next[0].left;
+				delete it->next[0].right;
 			}
 		}
-		delete head;
-		delete tail;
+		//delete head;
+		//delete tail;
 	}
 
 	//Iterator constructor
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Iterator::Iterator(Node* pos){
-		this->target = std::make_shared<Node>(pos);
+	Map<Key_T, Mapped_T>::Iterator::Iterator(Map<Key_T, Mapped_T>::Base_Node* pos){
+		this->target = std::make_shared<Base_Node>(pos);
 	}
 	
 	//Iterator ++ operator returns reference post increment
 	//the ampersand at the end takes care of the return by reference 
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator++(){
-		this->target = target->next[0];
+		this->target = target->next[0].right;
 		return *this;
 	}
 	
@@ -269,14 +259,14 @@ namespace cs540{
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator++(int){
 		Iterator retval = *this;
-		this->target = target->next[0];
+		this->target = target->next[0].right;
 		return retval;
 	}
 	
 	//Iterator -- operator returns reference postdecremet
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator--(){
-		this->target = target->prev;
+		this->target = target->next[0].left;
 		return *this;
 	}
 	
@@ -284,7 +274,7 @@ namespace cs540{
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator--(int){
 		Iterator retval = *this;
-		this->target = target->prev;
+		this->target = target->next[0].left;
 		return retval;
 	}
 	
@@ -304,55 +294,55 @@ namespace cs540{
 
 	//ConstIterator constructor
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::ConstIterator::ConstIterator(const Node* pos){
-		this->target = std::make_shared<Node>(pos);
+	Map<Key_T, Mapped_T>::ConstIterator::ConstIterator(const Map<Key_T, Mapped_T>::Base_Node* pos){
+		this->target = std::make_shared<Base_Node>(pos);
 	}
 
 	//ReverseIterator constructor
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::ReverseIterator::ReverseIterator(Node* pos){
-		this->target = std::make_shared<Node>(pos);
+	Map<Key_T, Mapped_T>::ReverseIterator::ReverseIterator(Map<Key_T, Mapped_T>::Base_Node* pos){
+		this->target = std::make_shared<Base_Node>(pos);
 	}
 
 	//Iterator begin()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::begin(){
-		auto it = new Iterator(head->next[0]);
+		auto it = new Iterator(head.next[0].right);
 		return it;
 	}
 	
 	//Iterator end()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::end(){
-		auto it = new Iterator(tail);
+		auto it = new Iterator(&tail);
 		return it;
 	}
 	
 	//ConstIterator begin()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ConstIterator Map<Key_T, Mapped_T>::begin() const{
-		auto it = new ConstIterator(head->next[0]);
+		auto it = new ConstIterator(head.next[0].right);
 		return it;
 	}
 	
 	//ConstIterator end()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ConstIterator Map<Key_T, Mapped_T>::end() const{
-		auto it = new ConstIterator(tail);
+		auto it = new ConstIterator(&tail);
 		return it;
 	}
 	
 	//ReverseIterator rbegin()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ReverseIterator Map<Key_T, Mapped_T>::rbegin(){
-		auto it = new ReverseIterator(tail->prev);
+		auto it = new ReverseIterator(tail.next[0].left);
 		return it;
 	}
 	
 	//ReverseIterator rend()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ReverseIterator Map<Key_T, Mapped_T>::rend(){
-		auto it = new ReverseIterator(head);
+		auto it = new ReverseIterator(&head);
 		return it;
 	}
 	
@@ -373,8 +363,8 @@ namespace cs540{
 			--reset;
 		}
 
-		if(h >= max_height){
-			h = h % max_height;
+		if(h >= 32){
+			h = h % 32;
 		}
 		return h;
 	}
@@ -383,47 +373,41 @@ namespace cs540{
 	//Skip List insert
 	template<typename Key_T, typename Mapped_T>
 	std::pair<typename Map<Key_T, Mapped_T>::Node*, bool> Map<Key_T, Mapped_T>::skip_list_insert(Key_T key, Mapped_T value, bool searchFlag = false){
-		Node *it = this->head;
+		Node *it = (Node*)head.next[0].right;
 		Node *item  = new Node(key, value);
-		Node **fix = new Node*[max_height];
+		std::vector<Node*> fix(max_height, nullptr);
 
-		for(int i = curr_height - 1; i >= 0; i--){
-			
-			while(it->next[i] != nullptr && it->next[i]->key < key){
-				it = it->next[i];
+		for(int i = curr_height - 1; i >= 0; i--){	
+			while(it->next[i].right != nullptr && it->next[i].right->key < key){
+				it = it->next[i].right;
 			}
 			fix[i] = it;
 		}
 		//Check if key already is in map
-		if(it->next[0] != nullptr && it->next[0]->key == key){
-			delete[] fix;
+		if(it->next[0].right != nullptr && it->next[0].right->key == key){
 			delete item;
-			return std::pair<Node*, bool>(it->next[0], false);
+			return std::pair<Node*, bool>(it->next[0].right, false);
 		}
 		else if(searchFlag){
 			//Key is not in map, but we are just here to search
-			delete[] fix;
 			delete item;
 			return std::pair<Node*, bool>(nullptr, false);
 		}
 		else{
 			//key is not in map but we are here to insert
 			while(item->height > curr_height){
-				fix[curr_height++] = this->head;
+				fix[curr_height++] = &head;
 			}
 			
 			int h = item->height;
 			while(--h >= 0){
-				item->next[h] = fix[h]->next[h];
-				fix[h]->next[h] = item;
-				if(h == 0){
-					item->prev = fix[h]->next[h];
-				}
+				item->next[h].right = fix[h]->next[h].right->next[h].right;
+				fix[h]->next[h].right->next[h].right = item;
+				item->next[h].left = fix[h].right;
 			}
-			item->next[0]->prev = item;
+			item->next[0].right->next[0].left = item;
 			current_size++;
 		}
-		delete[] fix;
 		return std::pair<Node*, bool>(item, true);
 	}			
 
@@ -488,27 +472,27 @@ namespace cs540{
 		Node* to_del;
 		Node **fix = new Node*[max_height];
 		for(int i = curr_height - 1; i >= 0; i--){
-			while(it->next[i] != nullptr && it->next[i]->key < key){
-				it = it->next[i];
+			while(it->next[i].right != nullptr && it->next[i].right->key < key){
+				it = it->next[i].right;
 			}
 			fix[i] = it;
 		}
-		if(it->next[0] == nullptr || it->next[0]->key != key){
+		if(it->next[0].right == nullptr || it->next[0].right->key != key){
 			return false;
 		}
 		else{
-			to_del = fix[0]->next[0];
+			to_del = fix[0]->next[0].right;
 			for(int i = 0; i < curr_height; i++){
-				if(fix[i]->next[i] != nullptr){
-					fix[i]->next[i] = fix[i]->next[i]->next[i];
-					fix[i]->next[i]->prev = fix[i];
+				if(fix[i]->next[i].right != nullptr){
+					fix[i]->next[i].right = fix[i]->next[i].right->next[i].right;
+					fix[i]->next[i].right->next[i].left = fix[i];
 				}
 			}
 			while(curr_height > 0){
-				if(head->next[curr_height-1] != nullptr){
+				if(head.next[curr_height-1].right != nullptr){
 					break;
 				}
-				head->next[--curr_height] = nullptr;
+				head.next[--curr_height].right = nullptr;
 			}
 		}
 		current_size--;
