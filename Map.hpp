@@ -100,8 +100,8 @@ namespace cs540{
 
 			class Iterator{	
 				private:
-					Iterator(Base_Node* pos);
-					std::shared_ptr<Base_Node> target;
+					Iterator(Node* pos);
+					std::shared_ptr<Node> target;
 				public:
 					friend class Map;
 					Iterator(const Iterator &);
@@ -243,9 +243,7 @@ namespace cs540{
 
 	//Iterator constructor
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Iterator::Iterator(Map<Key_T, Mapped_T>::Base_Node* pos){
-		this->target = std::make_shared<Base_Node>(pos);
-	}
+	Map<Key_T, Mapped_T>::Iterator::Iterator(Map<Key_T, Mapped_T>::Node* pos) : target(std::shared_ptr<Node>(pos)){}
 	
 	//Iterator ++ operator returns reference post increment
 	//the ampersand at the end takes care of the return by reference 
@@ -373,20 +371,24 @@ namespace cs540{
 	//Skip List insert
 	template<typename Key_T, typename Mapped_T>
 	std::pair<typename Map<Key_T, Mapped_T>::Node*, bool> Map<Key_T, Mapped_T>::skip_list_insert(Key_T key, Mapped_T value, bool searchFlag = false){
-		Node *it = (Node*)head.next[0].right;
+		Node *it = static_cast<Node*>(&head);
 		Node *item  = new Node(key, value);
-		std::vector<Node*> fix(max_height, nullptr);
+		std::vector<Base_Node*> fix(max_height, nullptr);
 
 		for(int i = curr_height - 1; i >= 0; i--){	
-			while(it->next[i].right != nullptr && it->next[i].right->key < key){
-				it = it->next[i].right;
+			while(it->next[i].right != nullptr){
+				Node* right = static_cast<Node*>(it->next[i].right);
+				if(right->key > key){
+					break;
+				}
+				it = right;
 			}
 			fix[i] = it;
 		}
 		//Check if key already is in map
-		if(it->next[0].right != nullptr && it->next[0].right->key == key){
+		if(it->next[0].right != nullptr && static_cast<Node*>(it->next[0].right)->key == key){
 			delete item;
-			return std::pair<Node*, bool>(it->next[0].right, false);
+			return std::pair<Node*, bool>(static_cast<Node*>(it->next[0].right), false);
 		}
 		else if(searchFlag){
 			//Key is not in map, but we are just here to search
@@ -403,7 +405,7 @@ namespace cs540{
 			while(--h >= 0){
 				item->next[h].right = fix[h]->next[h].right->next[h].right;
 				fix[h]->next[h].right->next[h].right = item;
-				item->next[h].left = fix[h].right;
+				item->next[h].left = fix[h]->next[h].right;
 			}
 			item->next[0].right->next[0].left = item;
 			current_size++;
