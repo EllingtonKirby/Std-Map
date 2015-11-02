@@ -14,6 +14,12 @@ self_test: self_test.o
 self_test.o: self_test.cpp
 	$(COMP) $(FLAGS) -c self_test.cpp
 
+test-scaling: test-scaling.o
+	$(COMP) $(FLAGS) -Wfatal-errors -o $(PROJ) test-scaling.o
+
+test-scaling.o: test-scaling.cpp
+	$(COMP) $(FLAGS) -Wfatal-errors -c test-scaling.cpp
+
 Map: Map.hpp
 	$(COMP) $(FLAGS) -c Map.hpp
 

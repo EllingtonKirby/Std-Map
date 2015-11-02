@@ -1,3 +1,5 @@
+#ifndef XXX_MAP_XXX
+#define XXX_MAP_XXX
 #include <iostream>
 #include <utility>
 #include <random>
@@ -93,6 +95,8 @@ namespace cs540{
 			void erase(const Key_T &);
 			void clear();
 			int current_height() const{return curr_height;};
+			//Extra Credit
+			Node* fingerSearch(const Key_T &);
 			//Comparison
 			friend bool operator<(const Map &lhs, const Map &rhs){
 				if(lhs.size() > rhs.size()){
@@ -293,6 +297,7 @@ namespace cs540{
 			Node *nn = new Node(*casted);
 			for(int i = 0; i < nn->height; i++){
 				nn->next[i].left = last.at(i);
+				nn->next[i].right = last.at(i)->next[i].right;
 				last.at(i)->next[i].right = nn;
 				last.at(i) = nn;
 			}
@@ -311,13 +316,12 @@ namespace cs540{
 		std::array<Base_Node*, 32> last;
 		last.fill(&head);
 		
-		for(Base_Node *n = rhs.head.next[0].right; n != &rhs.tail && n->next[0].right != nullptr; n = n->next[0].right){
+		for(Base_Node *n = rhs.head.next[0].right; n != &rhs.tail; n = n->next[0].right){
 			Node *casted = static_cast<Node*>(n);
 			Node *nn = new Node(*casted);
 			for(int i = 0; i < nn->height; i++){
+				nn->next[i].left = last.at(i);
 				nn->next[i].right = last.at(i)->next[i].right;
-				nn->next[i].left = last.at(i)->next[i].right->next[i].left;
-				last.at(i)->next[i].right->next[i].left = nn;
 				last.at(i)->next[i].right = nn;
 				last.at(i) = nn;
 			}
@@ -388,7 +392,7 @@ namespace cs540{
 		static int bits = 0;
 		static int reset = 0;
 		int h, found = 0;
-		std::random_device rd;
+		static std::random_device rd;
 		for(h = 0; !found; h++){
 			if(reset == 0){
 				bits = rd();
@@ -616,3 +620,4 @@ namespace cs540{
 		return current_size == 0;
 	}
 }
+#endif

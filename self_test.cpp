@@ -23,4 +23,15 @@ int main(int argc, char** argv){
 
 	Map<int, char> newly_constructed;
 	newly_constructed.insert(default_constructed.begin(), default_constructed.end());
+
+	newly_constructed.erase(10);
+	newly_constructed.erase(1);
+	std::cout << newly_constructed.size() << std::endl;
+	
+	Map<int, char> copied;
+        copied = newly_constructed;	
+
+	newly_constructed.clear();
+	std::cout << newly_constructed.size() << std::endl;
+
 }
