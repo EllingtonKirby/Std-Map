@@ -47,23 +47,15 @@ namespace cs540{
 			class Node : public Base_Node{
 				public:
 					friend class Map;
+					ValueType vtype;
 					Key_T key;
 					Mapped_T value;
-					ValueType vtype;
-					int width;
 					Node(Key_T &keyed, Mapped_T &valued, int applied_height = rheight()) : Base_Node(applied_height), vtype(keyed, valued){
 						value = vtype.second;
 						key = vtype.first;
 					};
-					Node(const Node& rhs) : Base_Node(rhs.height), vtype(rhs.vtype){
-						this->key = vtype.first;
-						this->value = vtype.second;
-					};
-					~Node(){
-
-					};
+					Node(const Node& rhs) : Base_Node(rhs.height), vtype(rhs.vtype), key(vtype.first), value(vtype.second){};
 			};
-
 
 			//Constructors and Assignment
 			Map();
@@ -91,17 +83,18 @@ namespace cs540{
 			std::pair<Iterator, bool> insert(const ValueType &);
 			template<typename IT_T> 
 			void insert(IT_T range_beg, IT_T range_end){
-				while(begin != end){
-					skip_list_insert(*begin.first, *begin.second);
-				}
-				
-			}
+				IT_T iter = range_beg;
+				while(iter != range_end){
+					insert(*iter);
+					iter++;
+				}	
+			};
 			void erase(Iterator pos);
 			void erase(const Key_T &);
 			void clear();
 			int current_height() const{return curr_height;};
 			//Comparison
-			friend bool operator==(const Map &lhs, const Map &rhs){
+			friend bool operator<(const Map &lhs, const Map &rhs){
 				if(lhs.size() > rhs.size()){
 					return false;
 				}
@@ -121,7 +114,22 @@ namespace cs540{
 			};
 			friend bool operator!=(const Map &lhs, const Map &rhs){
 				return !(lhs == rhs);
-			}
+			};
+			friend bool operator==(const Map &lhs, const Map &rhs){
+				if(lhs.size() != rhs.size()){
+					return false;
+				}
+				else{
+					ConstIterator L = lhs.begin();
+					for(ConstIterator R = rhs.begin(); R != rhs.end(); R++){
+						if(*L != *R){
+							return false;
+						}
+						L++;
+					}
+					return true;
+				}
+			};
 			class Iterator{	
 				private:
 					Iterator(Base_Node* pos) : target(pos){};
@@ -136,7 +144,6 @@ namespace cs540{
 						return !(lhs == rhs);
 					};
 					Iterator(const Iterator &iter) : target(iter.target){};
-					Iterator& operator=(const Iterator &);
 					Iterator& operator++(){			
 						target = target->next[0].right;
 						return *this;
@@ -162,6 +169,19 @@ namespace cs540{
 					ValueType &operator*() const{
 						return static_cast<Node*>(target)->vtype;	
 					};
+					friend bool operator==(const Iterator &rhs, const ConstIterator &lhs){
+						return rhs.target == lhs.target;			
+					};
+					friend bool operator==(const ConstIterator &rhs, const Iterator &lhs){
+						return rhs.target == lhs.target;
+					};
+					friend bool operator!=(const Iterator &rhs, const ConstIterator &lhs){
+						return !(rhs == lhs); 
+					};
+					friend bool operator!=(const ConstIterator &rhs, const Iterator &lhs){
+						return !(rhs == lhs);
+					};
+					
 			};
 
 			class ConstIterator{
@@ -178,7 +198,6 @@ namespace cs540{
 						return !(lhs == rhs);
 					};
 					ConstIterator(const Iterator &iter) : target(iter.target){};
-					ConstIterator& operator=(const Iterator &);
 					ConstIterator& operator++(){
 						target = target->next[0].right;
 						return *this;			
@@ -219,7 +238,6 @@ namespace cs540{
 						return !(lhs == rhs);
 					};
 					ReverseIterator(const ReverseIterator &iter) : target(iter.target){};
-					ReverseIterator& operator=(const ReverseIterator &);
 					ReverseIterator& operator++(){
 						target = target->next[0].left;
 						return *this;	
@@ -287,31 +305,37 @@ namespace cs540{
 		if(*this == rhs){
 			return *this;
 		}
+		clear();
 		this->curr_height = rhs.current_height();
+		this->current_size = rhs.size();
 		std::array<Base_Node*, 32> last;
 		last.fill(&head);
 		
-		for(Base_Node *n = rhs.head.next[0].right; n != &rhs.tail; n = n->next[0].right){
+		for(Base_Node *n = rhs.head.next[0].right; n != &rhs.tail && n->next[0].right != nullptr; n = n->next[0].right){
 			Node *casted = static_cast<Node*>(n);
 			Node *nn = new Node(*casted);
 			for(int i = 0; i < nn->height; i++){
-				nn->next[i].left = last.at(i);
+				nn->next[i].right = last.at(i)->next[i].right;
+				nn->next[i].left = last.at(i)->next[i].right->next[i].left;
+				last.at(i)->next[i].right->next[i].left = nn;
 				last.at(i)->next[i].right = nn;
 				last.at(i) = nn;
 			}
-			current_size++;
 		}
 		return *this;
 	}
 
 	//Map initializer list construction
 	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Map(std::initializer_list<std::pair<const Key_T, Mapped_T>> list){
-		auto iter = list.begin();
-		while(iter != list.end()){
-			this->skip_list_insert(iter->first, iter->second);
-			iter++;
+	Map<Key_T, Mapped_T>::Map(std::initializer_list<std::pair<const Key_T, Mapped_T>> list) : max_height(32), head(32), tail(32) {
+		for(int i = 0; i < max_height; i++){
+			head.next[i].right = &tail;
+			tail.next[i].left = &head;
 		}
+		current_size = 0;
+		curr_height = 1;
+		
+		insert(list.begin(), list.end());
 	}
 	
 	//Map destructor
@@ -387,15 +411,11 @@ namespace cs540{
 	std::pair<typename Map<Key_T, Mapped_T>::Node*, bool> Map<Key_T, Mapped_T>::skip_list_insert(Key_T key, Mapped_T value, bool searchFlag = false){
 		Base_Node* it = &head;
 		Node *item  = new Node(key, value);
-		std::vector<Base_Node*> fix(max_height, nullptr);
+		std::vector<Base_Node*> fix(max_height, &head);
 
 		for(int i = curr_height - 1; i >= 0; i--){	
-			while(it->next[i].right != nullptr){
-				Node* right = static_cast<Node*>(it->next[i].right);
-				if(it->next[i].right == &tail || right->key > key){
-					break;
-				}
-				it = right;
+			while(it->next[i].right != &tail && static_cast<Node*>(it->next[i].right)->key < key){
+				it = it->next[i].right;
 			}
 			fix[i] = it;
 		}
@@ -413,10 +433,10 @@ namespace cs540{
 			int h = item->height;
 			while(--h >= 0){
 				item->next[h].right = fix[h]->next[h].right;
+				item->next[h].left = fix[h]->next[h].right->next[h].left;
+				fix[h]->next[h].right->next[h].left = item;
 				fix[h]->next[h].right = item;
-				item->next[h].left = fix[h];
 			}
-			item->next[0].right->next[0].left = item;
 			current_size++;
 		}
 		return std::pair<Node*, bool>(item, true);
@@ -426,12 +446,8 @@ namespace cs540{
 	typename Map<Key_T, Mapped_T>::Node* Map<Key_T, Mapped_T>::skip_list_find(const Key_T &search){
 		Base_Node* it = &head;
 		for(int i = curr_height - 1; i >= 0; i--){	
-			while(it->next[i].right != nullptr){
-				Node* right = static_cast<Node*>(it->next[i].right);
-				if((it->next[i].right == &tail) || right->key > search){
-					break;
-				}
-				it = right;
+			while(it->next[i].right != &tail && static_cast<Node*>(it->next[i].right)->key < search){
+				it = it->next[i].right;
 			}
 		}
 		//Check if key already is in map
@@ -449,12 +465,8 @@ namespace cs540{
 	const typename Map<Key_T, Mapped_T>::Node* Map<Key_T, Mapped_T>::skip_list_find(const Key_T &search) const{
 		const Base_Node* it = &head;
 		for(int i = curr_height - 1; i >= 0; i--){	
-			while(it->next[i].right != nullptr){
-				Node* right = static_cast<Node*>(it->next[i].right);
-				if(it->next[i].right == &tail || right->key > search){
-					break;
-				}
-				it = right;
+			while(it->next[i].right != &tail && static_cast<Node*>(it->next[i].right)->key < search){
+				it = it->next[i].right;
 			}
 		}
 		//Check if key already is in map
@@ -515,9 +527,9 @@ namespace cs540{
 		Node* result  = skip_list_find(search);
 		if(result == nullptr){
 			skip_list_insert(search, Mapped_T());
-			result = skip_list_find(search);
+			return skip_list_find(search)->vtype.second;
 		}
-		return result->value;
+		return result->vtype.second;
 	}	
 	
 	//ValueType insert
@@ -525,7 +537,7 @@ namespace cs540{
 	std::pair<typename Map<Key_T, Mapped_T>::Iterator, bool> Map<Key_T, Mapped_T>::insert(const Map<Key_T, Mapped_T>::ValueType &vt){
 		std::pair<Node*, bool> insert_result = skip_list_insert(vt.first, vt.second);
 		Iterator iter(insert_result.first);
-		std::pair<Iterator, bool> retval = std::make_pair(iter, (insert_result.first != nullptr));		
+		std::pair<Iterator, bool> retval = std::make_pair(iter, insert_result.second);		
 		return retval;
 	}
 
@@ -538,31 +550,30 @@ namespace cs540{
 		std::vector<Base_Node*> fix(max_height, nullptr);
 
 		for(int i = curr_height - 1; i >= 0; i--){
-			while(it->next[i].right != nullptr){
-				Node * right = static_cast<Node*>(it->next[i].right);
-				if(right->key == key || it->next[i].right == &tail){
-					break;
-				}
+			while(it->next[i].right != &tail && static_cast<Node*>(it->next[i].right)->key < key){
 				it = it->next[i].right;
 			}
 			fix[i] = it;
 		}
-		if(it->next[0].right == nullptr || static_cast<Node*>(it->next[0].right)->key != key){
+		if(it->next[0].right == &tail || static_cast<Node*>(it->next[0].right)->key != key){
 			return false;
 		}
 		else{
-			to_del = static_cast<Node*>(it->next[0].right);
+			it = it->next[0].right;
+			to_del = static_cast<Node*>(it);
 			for(int i = 0; i < curr_height; i++){
-				if(fix[i]->next[i].right != nullptr){
-					fix[i]->next[i].right = fix[i]->next[i].right->next[i].right;
-					fix[i]->next[i].right->next[i].left = fix[i];
-				}
-			}
-			while(curr_height > 0){
-				if(head.next[curr_height-1].right != nullptr){
+				if(fix[i]->next[i].right != it){
 					break;
 				}
-				head.next[--curr_height].right = nullptr;
+				fix[i]->next[i].right = it->next[i].right;
+				it->next[i].right->next[i].left = fix[i];
+			}
+			while(curr_height > 0){
+				if(head.next[curr_height-1].right != &tail){
+					break;
+				}
+				head.next[--curr_height].right = &tail;
+				tail.next[curr_height].left = &head;
 			}
 		}
 		current_size--;
@@ -604,5 +615,4 @@ namespace cs540{
 	bool Map<Key_T, Mapped_T>::empty() const {
 		return current_size == 0;
 	}
-
 }
