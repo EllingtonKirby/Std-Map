@@ -27,7 +27,9 @@ namespace cs540{
 			Base_Node tail;
 			int curr_height;
 			std::pair<Node*, bool> skip_list_insert(Key_T key, Mapped_T val, bool searchFlag);
-			bool skip_list_erase(const Key_T key);
+			bool skip_list_erase(const Key_T);
+			Node* skip_list_find(const Key_T &);
+			const Node* skip_list_find(const Key_T &) const;
 		public:	
 			//Member Type
 			typedef std::pair<const Key_T, Mapped_T> ValueType;
@@ -53,8 +55,7 @@ namespace cs540{
 						value = vtype.second;
 						key = vtype.first;
 					};
-					Node(const Node& rhs) : Base_Node(rhs.height){
-						this->vtype = rhs.vtype;
+					Node(const Node& rhs) : Base_Node(rhs.height), vtype(rhs.vtype){
 						this->key = vtype.first;
 						this->value = vtype.second;
 					};
@@ -82,6 +83,7 @@ namespace cs540{
 			ReverseIterator rend();
 			//Element Access
 			Iterator find(const Key_T &);
+			ConstIterator find(const Key_T&) const;
 			Mapped_T &at(const Key_T &);
 			const Mapped_T &at(const Key_T &) const;
 			Mapped_T &operator[](const Key_T &);
@@ -97,53 +99,151 @@ namespace cs540{
 			void erase(Iterator pos);
 			void erase(const Key_T &);
 			void clear();
-
+			int current_height() const{return curr_height;};
+			//Comparison
+			friend bool operator==(const Map &lhs, const Map &rhs){
+				if(lhs.size() > rhs.size()){
+					return false;
+				}
+				ConstIterator L = lhs.begin();
+				ConstIterator R = rhs.begin();
+				while(L != lhs.end()){
+					if(*L < *R){
+						return true;
+					}
+					++L;
+					++R;
+				}
+				if(lhs.size() < rhs.size()){
+					return true;
+				}
+				return false;
+			};
+			friend bool operator!=(const Map &lhs, const Map &rhs){
+				return !(lhs == rhs);
+			}
 			class Iterator{	
 				private:
-					Iterator(Node* pos);
-					std::shared_ptr<Node> target;
+					Iterator(Base_Node* pos) : target(pos){};
+					Base_Node* target;
 				public:
 					friend class Map;
-					Iterator(const Iterator &);
+					friend class ConstIterator;
+					friend bool operator==(const Iterator &lhs, const Iterator &rhs){
+						return (lhs.target == rhs.target);
+					};
+					friend bool operator!=(const Iterator &lhs, const Iterator &rhs){
+						return !(lhs == rhs);
+					};
+					Iterator(const Iterator &iter) : target(iter.target){};
 					Iterator& operator=(const Iterator &);
-					Iterator& operator++();
-					Iterator operator++(int);
-					Iterator& operator--();
-					Iterator operator--(int);
-					ValueType *operator->() const;
-					ValueType &operator*() const;
+					Iterator& operator++(){			
+						target = target->next[0].right;
+						return *this;
+					};
+					Iterator operator++(int){
+						Iterator retval(*this);
+						target = target->next[0].right;
+						return retval;	
+					};
+					Iterator& operator--(){
+						target = target->next[0].left;
+						return *this;	
+					};
+					Iterator operator--(int){
+						Iterator retval(*this);
+						target = target->next[0].left;
+						return retval;
+					};
+					ValueType *operator->() const{
+						ValueType *retval = &static_cast<Node*>(target)->vtype;	
+						return retval;
+					};
+					ValueType &operator*() const{
+						return static_cast<Node*>(target)->vtype;	
+					};
 			};
 
 			class ConstIterator{
 				private:
-					ConstIterator(const Base_Node* pos);
-					std::shared_ptr<Base_Node> target;
+					ConstIterator(const Base_Node* pos) : target(pos){};
+					const Base_Node* target;
 				public:
 					friend class Map;
-					ConstIterator(const Iterator &);
+					friend class Iterator;
+					friend bool operator==(const ConstIterator &lhs, const ConstIterator &rhs){
+						return (lhs.target == rhs.target);
+					};
+					friend bool operator!=(const ConstIterator &lhs, const ConstIterator &rhs){
+						return !(lhs == rhs);
+					};
+					ConstIterator(const Iterator &iter) : target(iter.target){};
 					ConstIterator& operator=(const Iterator &);
-					ConstIterator& operator++();
-					ConstIterator operator++(int);
-					ConstIterator& operator--();
-					ConstIterator operator--(int);
-					const ValueType *operator->() const;
-					const ValueType &operator*() const;
+					ConstIterator& operator++(){
+						target = target->next[0].right;
+						return *this;			
+					};
+					ConstIterator operator++(int){
+						ConstIterator retval(*this);
+						target = target->next[0].right;	
+						return retval;
+					};
+					ConstIterator& operator--(){
+						target = target->next[0].left;
+						return *this;	
+					};
+					ConstIterator operator--(int){
+						ConstIterator retval(*this);
+						target = target->next[0].left;
+						return retval;
+
+					};
+					const ValueType *operator->() const{	
+						return &static_cast<const Node*>(target)->vtype;	
+					};
+					const ValueType &operator*() const{
+						return static_cast<const Node*>(target)->vtype;	
+					};
 			};
 
 			class ReverseIterator{
 				private:
-					ReverseIterator(Base_Node* pos);
-					std::shared_ptr<Base_Node> target;
+					ReverseIterator(Base_Node* pos) : target(pos){};
+					Base_Node* target;
 				public:
 					friend class Map;
-					ReverseIterator(const Iterator &);
-					ReverseIterator& operator=(const Iterator &);
-					ReverseIterator& operator++();
-					ReverseIterator operator++(int);
-					ReverseIterator& operator--();
-					ReverseIterator operator--(int);
-					ValueType *operator->() const;
-					ValueType &operator*() const;
+					friend bool operator==(const ReverseIterator &lhs, const ReverseIterator &rhs){
+						return (lhs.target == rhs.target);
+					};
+					friend bool operator!=(const ReverseIterator &lhs, const ReverseIterator &rhs){
+						return !(lhs == rhs);
+					};
+					ReverseIterator(const ReverseIterator &iter) : target(iter.target){};
+					ReverseIterator& operator=(const ReverseIterator &);
+					ReverseIterator& operator++(){
+						target = target->next[0].left;
+						return *this;	
+					};
+					ReverseIterator operator++(int){
+						ReverseIterator retval(*this);
+						target = target->next[0].left;
+						return retval;	
+					};
+					ReverseIterator& operator--(){
+						target = target->next[0].right;
+						return *this;	
+					};
+					ReverseIterator operator--(int){
+						ReverseIterator retval(*this);
+						target = target->next[0].right;
+						return retval;	
+					};
+					ValueType *operator->() const{
+						return &static_cast<Node*>(target)->vtype;	
+					};
+					ValueType &operator*() const{
+						return static_cast<Node*>(target)->vtype;	
+					};
 			};
 
 
@@ -151,16 +251,12 @@ namespace cs540{
 	//Map Default Constructor	
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::Map() : max_height(32), head(32), tail(32){
-		//Lets steal his implementation... 
-		//Key_T sent_key;
-		//Mapped_T sent_map;
-		//Node * head = new Node(sent_key, sent_map, max_height);
-		//Node * tail = new Node(sent_key, sent_map, max_height);
 		for(int i = 0; i < max_height; i++){
 			head.next[i].right = &tail;
 			tail.next[i].left = &head;
 		}
 		current_size = 0;
+		curr_height = 1;
 	}
 	//Map Copy Constructor
 	template<typename Key_T, typename Mapped_T>
@@ -170,20 +266,16 @@ namespace cs540{
 			tail.next[i].left = &head;
 		}
 		current_size = 0;
+		this->curr_height = rhs.current_height();
 		std::array<Base_Node*, 32> last;
 		last.fill(&head);
 		
-		for(Node *n = rhs.head.next[0]; n != rhs.tail; n = n->next[0]){
-			Node *nn = new Node(*n);
+		for(Base_Node *n = rhs.head.next[0].right; n != &rhs.tail; n = n->next[0].right){
+			Node *casted = static_cast<Node*>(n);
+			Node *nn = new Node(*casted);
 			for(int i = 0; i < nn->height; i++){
-				//if(i == 0){
-				//	nn->prev = last[i];
-				//}
-				//insert nn into corresponding row for each height it is a part of
-				//insertSpecificNode(i, last.at(i), nn);
-				//Is this all we need to do?
 				nn->next[i].left = last.at(i);
-				last.at(i).next[i] = nn;
+				last.at(i)->next[i].right = nn;
 				last.at(i) = nn;
 			}
 			current_size++;
@@ -195,24 +287,20 @@ namespace cs540{
 		if(*this == rhs){
 			return *this;
 		}
-		std::array<Base_Node*, max_height> last;
+		this->curr_height = rhs.current_height();
+		std::array<Base_Node*, 32> last;
 		last.fill(&head);
 		
-		for(Node *n = rhs.head.next[0]; n != rhs.tail; n = n->next[0]){
-			Node *nn = new Node(*n);
+		for(Base_Node *n = rhs.head.next[0].right; n != &rhs.tail; n = n->next[0].right){
+			Node *casted = static_cast<Node*>(n);
+			Node *nn = new Node(*casted);
 			for(int i = 0; i < nn->height; i++){
-				//if(i == 0){
-				//	nn->prev = last[i];
-				//}
-				//insert nn into corresponding row for each height it is a part of
-				//insertSpecificNode(i, last.at(i), nn);
-				//Is this all we need to do?
 				nn->next[i].left = last.at(i);
-				last.at(i).next[i] = nn;
+				last.at(i)->next[i].right = nn;
 				last.at(i) = nn;
 			}
 			current_size++;
-		}	
+		}
 		return *this;
 	}
 
@@ -229,119 +317,45 @@ namespace cs540{
 	//Map destructor
 	template<typename Key_T, typename Mapped_T>
 	Map<Key_T, Mapped_T>::~Map(){
-		//Ask about this function
 		if(current_size > 0){
-			Base_Node * it = tail.next[0].left;
-			while(it->next[0].left != nullptr){
-				it = it->next[0].left;
-				delete it->next[0].right;
-			}
+			clear();
 		}
-		//delete head;
-		//delete tail;
-	}
-
-	//Iterator constructor
-	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::Iterator::Iterator(Map<Key_T, Mapped_T>::Node* pos) : target(std::shared_ptr<Node>(pos)){}
-	
-	//Iterator ++ operator returns reference post increment
-	//the ampersand at the end takes care of the return by reference 
-	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator++(){
-		this->target = target->next[0].right;
-		return *this;
-	}
-	
-	//Iterator ++ operator returns iterator preincrement
-	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator++(int){
-		Iterator retval = *this;
-		this->target = target->next[0].right;
-		return retval;
-	}
-	
-	//Iterator -- operator returns reference postdecremet
-	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator& Map<Key_T, Mapped_T>::Iterator::operator--(){
-		this->target = target->next[0].left;
-		return *this;
-	}
-	
-	//Iterator -- operator returns iterator predecrement
-	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::Iterator::operator--(int){
-		Iterator retval = *this;
-		this->target = target->next[0].left;
-		return retval;
-	}
-	
-	//Iterator -> access	
-	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::ValueType* Map<Key_T, Mapped_T>::Iterator::operator->() const{
-		//Does this return a pointer???
-		return this->target->vtype;	
-	}
-	
-	//Iterator dereference operator 
-	template<typename Key_T, typename Mapped_T>
-	typename Map<Key_T, Mapped_T>::ValueType& Map<Key_T, Mapped_T>::Iterator::operator*() const{
-		//Does this pair object copy the elements by value? How do I make it possible to modify the members of the iterator via this function
-		return this->target->vtype; 
-	}
-
-	//ConstIterator constructor
-	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::ConstIterator::ConstIterator(const Map<Key_T, Mapped_T>::Base_Node* pos){
-		this->target = std::make_shared<Base_Node>(pos);
-	}
-
-	//ReverseIterator constructor
-	template<typename Key_T, typename Mapped_T>
-	Map<Key_T, Mapped_T>::ReverseIterator::ReverseIterator(Map<Key_T, Mapped_T>::Base_Node* pos){
-		this->target = std::make_shared<Base_Node>(pos);
 	}
 
 	//Iterator begin()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::begin(){
-		auto it = new Iterator(head.next[0].right);
-		return it;
+		return Iterator(head.next[0].right);
 	}
 	
 	//Iterator end()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::end(){
-		auto it = new Iterator(&tail);
-		return it;
+		return Iterator(&tail);;
 	}
 	
 	//ConstIterator begin()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ConstIterator Map<Key_T, Mapped_T>::begin() const{
-		auto it = new ConstIterator(head.next[0].right);
-		return it;
+		return ConstIterator(head.next[0].right);
 	}
 	
 	//ConstIterator end()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ConstIterator Map<Key_T, Mapped_T>::end() const{
-		auto it = new ConstIterator(&tail);
-		return it;
+		return ConstIterator(&tail);
 	}
 	
 	//ReverseIterator rbegin()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ReverseIterator Map<Key_T, Mapped_T>::rbegin(){
-		auto it = new ReverseIterator(tail.next[0].left);
-		return it;
+		return ReverseIterator(tail.next[0].left);
 	}
 	
 	//ReverseIterator rend()
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::ReverseIterator Map<Key_T, Mapped_T>::rend(){
-		auto it = new ReverseIterator(&head);
-		return it;
+		return ReverseIterator(&head);
 	}
 	
 	//Function that determines the random height of a column. All credit to Eternally Confuzzled at eternallyconfuzzled.com/tuts/datastructures/jsw_tut_skip.aspx
@@ -371,14 +385,14 @@ namespace cs540{
 	//Skip List insert
 	template<typename Key_T, typename Mapped_T>
 	std::pair<typename Map<Key_T, Mapped_T>::Node*, bool> Map<Key_T, Mapped_T>::skip_list_insert(Key_T key, Mapped_T value, bool searchFlag = false){
-		Node *it = static_cast<Node*>(&head);
+		Base_Node* it = &head;
 		Node *item  = new Node(key, value);
 		std::vector<Base_Node*> fix(max_height, nullptr);
 
 		for(int i = curr_height - 1; i >= 0; i--){	
 			while(it->next[i].right != nullptr){
 				Node* right = static_cast<Node*>(it->next[i].right);
-				if(right->key > key){
+				if(it->next[i].right == &tail || right->key > key){
 					break;
 				}
 				it = right;
@@ -386,104 +400,158 @@ namespace cs540{
 			fix[i] = it;
 		}
 		//Check if key already is in map
-		if(it->next[0].right != nullptr && static_cast<Node*>(it->next[0].right)->key == key){
+		if(it->next[0].right != &tail && static_cast<Node*>(it->next[0].right)->key == key){
 			delete item;
 			return std::pair<Node*, bool>(static_cast<Node*>(it->next[0].right), false);
 		}
-		else if(searchFlag){
-			//Key is not in map, but we are just here to search
-			delete item;
-			return std::pair<Node*, bool>(nullptr, false);
-		}
 		else{
-			//key is not in map but we are here to insert
+			//key is not in map, insert
 			while(item->height > curr_height){
 				fix[curr_height++] = &head;
 			}
 			
 			int h = item->height;
 			while(--h >= 0){
-				item->next[h].right = fix[h]->next[h].right->next[h].right;
-				fix[h]->next[h].right->next[h].right = item;
-				item->next[h].left = fix[h]->next[h].right;
+				item->next[h].right = fix[h]->next[h].right;
+				fix[h]->next[h].right = item;
+				item->next[h].left = fix[h];
 			}
 			item->next[0].right->next[0].left = item;
 			current_size++;
 		}
 		return std::pair<Node*, bool>(item, true);
 	}			
+	//skip list find
+	template<typename Key_T, typename Mapped_T>
+	typename Map<Key_T, Mapped_T>::Node* Map<Key_T, Mapped_T>::skip_list_find(const Key_T &search){
+		Base_Node* it = &head;
+		for(int i = curr_height - 1; i >= 0; i--){	
+			while(it->next[i].right != nullptr){
+				Node* right = static_cast<Node*>(it->next[i].right);
+				if((it->next[i].right == &tail) || right->key > search){
+					break;
+				}
+				it = right;
+			}
+		}
+		//Check if key already is in map
+		if(it->next[0].right != &tail && static_cast<Node*>(it->next[0].right)->key == search){
+			return static_cast<Node*>(it->next[0].right);
+		}
+		else{
+			//Key is not in map
+			return nullptr;
+		}
+	}
+
+	//const skip list find
+	template<typename Key_T, typename Mapped_T>
+	const typename Map<Key_T, Mapped_T>::Node* Map<Key_T, Mapped_T>::skip_list_find(const Key_T &search) const{
+		const Base_Node* it = &head;
+		for(int i = curr_height - 1; i >= 0; i--){	
+			while(it->next[i].right != nullptr){
+				Node* right = static_cast<Node*>(it->next[i].right);
+				if(it->next[i].right == &tail || right->key > search){
+					break;
+				}
+				it = right;
+			}
+		}
+		//Check if key already is in map
+		if(it->next[0].right != nullptr && static_cast<Node*>(it->next[0].right)->key == search){
+			return static_cast<Node*>(it->next[0].right);
+		}
+		else{
+			//Key is not in map
+			return nullptr;
+		}
+	}
 
 	//iterator find
 	template<typename Key_T, typename Mapped_T>
 	typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::find(const Key_T &search){
-		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
-		if(result.first == nullptr){
+		Node* result = skip_list_find(search);
+		if(result == nullptr){
 			return end();
 		}
-
-		return Iterator(result.first);
+		return Iterator(result);
 	}		
+
+	//ConstIterator find
+	template<typename Key_T, typename Mapped_T>
+	typename Map<Key_T, Mapped_T>::ConstIterator Map<Key_T, Mapped_T>::find(const Key_T &search) const{
+		const Node * result = skip_list_find(search);
+		if(result == nullptr){
+			ConstIterator retval = end();
+			return retval;
+		}
+		return ConstIterator(result);
+	}
 	//At, non const
 	template<typename Key_T, typename Mapped_T>
 	Mapped_T& Map<Key_T, Mapped_T>::at(const Key_T &search){
-		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
-		if(result.first == nullptr){
+		Node* result = skip_list_find(search);
+		if(result == nullptr){
 			throw std::out_of_range("Key is not found in map");
 		}
 
-		return result.first->key;
+		return result->value;
 	}
 	
 	//At, const
 	template<typename Key_T, typename Mapped_T>	
 	const Mapped_T& Map<Key_T, Mapped_T>::at(const Key_T &search) const{
-		std::pair<Node*, bool> result = skip_list_insert(search, NULL, true);
-		if(result.first == nullptr){
+		const Node* result = skip_list_find(search);
+		if(result == nullptr){
 			throw std::out_of_range("Key is not found in map");
 		}
 
-		return result.first->key;
+		return result->value;
 	}
 		
 	//Map Operator[]	
 	template<typename Key_T, typename Mapped_T>
 	Mapped_T& Map<Key_T, Mapped_T>::operator[](const Key_T &search){
-		std::pair<Node*, bool> result  = skip_list_insert(search, NULL, true);
-		if(result.first == nullptr){
-			Mapped_T mapped;
-			return mapped;
+		Node* result  = skip_list_find(search);
+		if(result == nullptr){
+			skip_list_insert(search, Mapped_T());
+			result = skip_list_find(search);
 		}
-		else{
-			return result.first->value;
-		}
+		return result->value;
 	}	
 	
 	//ValueType insert
 	template<typename Key_T, typename Mapped_T>
 	std::pair<typename Map<Key_T, Mapped_T>::Iterator, bool> Map<Key_T, Mapped_T>::insert(const Map<Key_T, Mapped_T>::ValueType &vt){
 		std::pair<Node*, bool> insert_result = skip_list_insert(vt.first, vt.second);
-		Iterator iter(insert_result.first);			
-		return insert_result.second ? std::pair<Iterator, bool>(iter, true) : std::pair<Iterator, bool>(iter, false);
+		Iterator iter(insert_result.first);
+		std::pair<Iterator, bool> retval = std::make_pair(iter, (insert_result.first != nullptr));		
+		return retval;
 	}
 
 	//All credit to Eternally Confuzzled at eternallyconfuzzled.com/tuts/datastructures/jsw_tut_skip.aspx
 	//Skip List erase
 	template<typename Key_T, typename Mapped_T>
 	bool Map<Key_T, Mapped_T>::skip_list_erase(const Key_T key){
-		Node* it = head;
 		Node* to_del;
-		Node **fix = new Node*[max_height];
+		Base_Node* it = &head;
+		std::vector<Base_Node*> fix(max_height, nullptr);
+
 		for(int i = curr_height - 1; i >= 0; i--){
-			while(it->next[i].right != nullptr && it->next[i].right->key < key){
+			while(it->next[i].right != nullptr){
+				Node * right = static_cast<Node*>(it->next[i].right);
+				if(right->key == key || it->next[i].right == &tail){
+					break;
+				}
 				it = it->next[i].right;
 			}
 			fix[i] = it;
 		}
-		if(it->next[0].right == nullptr || it->next[0].right->key != key){
+		if(it->next[0].right == nullptr || static_cast<Node*>(it->next[0].right)->key != key){
 			return false;
 		}
 		else{
-			to_del = fix[0]->next[0].right;
+			to_del = static_cast<Node*>(it->next[0].right);
 			for(int i = 0; i < curr_height; i++){
 				if(fix[i]->next[i].right != nullptr){
 					fix[i]->next[i].right = fix[i]->next[i].right->next[i].right;
@@ -499,14 +567,13 @@ namespace cs540{
 		}
 		current_size--;
 		delete to_del;
-		delete[] fix;
 		return true;
 	}
 	
 	//Iterator erase
 	template<typename Key_T, typename Mapped_T>
 	void Map<Key_T, Mapped_T>::erase(Map<Key_T, Mapped_T>::Iterator pos){
-		skip_list_erase(*pos.first);
+		skip_list_erase(pos->first);
 	}
 
 	//Key_T erase
@@ -521,11 +588,8 @@ namespace cs540{
 	//Clear
 	template<typename Key_T, typename Mapped_T>
 	void Map<Key_T, Mapped_T>::clear(){
-		auto it = begin();
-		while(it != end()){
-			Key_T to_del = *it.first;
-			it++;
-			skip_list_erase(to_del);
+		while(begin().target != &tail){
+			skip_list_erase(begin()->first);
 		}	
 	}
 
@@ -541,54 +605,4 @@ namespace cs540{
 		return current_size == 0;
 	}
 
-	//Comparison
-	template<typename Key_T, typename Mapped_T>
-	bool operator==(const Map<Key_T, Mapped_T> &lhs, const Map<Key_T, Mapped_T> &rhs){
-		if(lhs.size() != rhs.size()){
-			return false;
-		}
-		
-		auto L = lhs.begin();
-		auto R = rhs.begin();
-
-		while(L != lhs.end()){
-			if(*L != *R){
-				return false;
-			}
-			++L;
-			++R;
-		}
-
-		return true;
-	}
-
-	template<typename Key_T, typename Mapped_T>
-	bool operator!=(const Map<Key_T, Mapped_T> &lhs, const Map<Key_T, Mapped_T> &rhs){
-		return !(lhs == rhs);
-	}
-
-	template<typename Key_T, typename Mapped_T>
-	bool operator<(const Map<Key_T, Mapped_T> &lhs, const Map<Key_T, Mapped_T> &rhs){
-		if(lhs.size() > rhs.size()){
-			return false;
-		}
-		
-		auto L = lhs.begin();
-		auto R = rhs.begin();
-
-		while(L != lhs.end()){
-			if(*L < *R){
-				return true;
-			}
-			++L;
-			++R;
-		}
-		
-		if(lhs.size() < rhs.size()){
-			return true;
-		}
-
-		return false;
-	}
-//Implement all comparisons between iterators
 }
